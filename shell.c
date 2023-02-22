@@ -4,6 +4,8 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <string.h>
+
+#define MAX_COMMAND_LENGTH 100
 /**
  * main - the function
  * Description: the artificial shell
@@ -11,49 +13,45 @@
  */
 int main(void)
 {
-	char *command = NULL;
-	size_t size = 0;
-	char *commands[20] = {"/bin/ls", NULL};
-	char *cleaned_command = malloc(30);
-	int index;
-	char *token;
-	pid_t pid;
+	char command[MAX_COMMAND_LENGTH];
+	int status;
 
-	while (1)
-	{
-		printf("$ ");
-		getline(&command, &size, stdin);
-		index = 0;
-		while (*(command + index) != '\n')
-		{
-			*(cleaned_command + index) = *(command + index);
-			index++;
+	while (1) {
+		// Print prompt and read user input
+		printf("> ");
+		if (fgets(command, MAX_COMMAND_LENGTH, stdin) == NULL) {
+			// End of file condition (Ctrl+D)
+			printf("\n");
+			break;
 		}
 
-		token = strtok(cleaned_command, " ");
-		*commands = token;
-		index = 0;
-		while (token != NULL)
-		{
-			*(commands + index) = token;
-			token = strtok(NULL, " ");
-			index++;
-		}
+		// Remove newline character at the end of the command
+		command[strcspn(command, "\n")] = 0;
 
-		pid = fork();
-		if (pid == -1)
-		{
-			printf("process was not completed\n");
-		}
-		else if (pid == 0)
-		{
-			if (execve(*commands, commands, NULL) == -1)
-				perror("Error");
-		}
-		else
-		{
-			wait(NULL);
+		// Fork a new process to execute the command
+		pid_t pid = fork();
+		if (pid == -1) {
+			perror("fork");
+			continue;
+		} else if (pid == 0) {
+			// Child process
+			if (execlp(command, command, (char *) NULL) == -1) {
+				// Error executing command
+				perror("execlp");
+				exit(1);
+			}
+		} else {
+			// Parent process
+			do {
+				// Wait for child process to finish
+				pid_t wpid = waitpid(pid, &status, WUNTRACED);
+				if (wpid == -1) {
+					perror("waitpid");
+					break;
+				}
+			} while (!WIFEXITED(status) && !WIFSIGNALED(status));
 		}
 	}
-	return (0);
+
+	return 0;
 }
