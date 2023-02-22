@@ -25,7 +25,7 @@ int main(void)
 	while (1)
 	{
 		/* Print prompt and read user input */
-		printf("> ");
+		printf("$ ");
 		if (fgets(command, MAX_COMMAND_LENGTH, stdin) == NULL)
 		{
 			/* End of file condition (Ctrl+D) */
